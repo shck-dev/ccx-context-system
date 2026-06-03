@@ -1,0 +1,12 @@
+{
+  "name": "ccx-context-system",
+  "owner": { "name": "personal" },
+  "description": "Portable .scratch/STATE/INDEX context-management methodology as a Claude Code plugin.",
+  "plugins": [
+    {
+      "name": "ccx",
+      "source": "./plugins/ccx",
+      "description": "Portable scratch-notebook core: per-thread STATE.md handoffs + compiled INDEX dashboard, 3 skills + 2 hooks. Language-agnostic, no ticket system required."
+    }
+  ]
+}

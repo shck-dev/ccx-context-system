@@ -1,0 +1,9 @@
+{
+  "name": "ccx",
+  "displayName": "ccx — portable notebook core",
+  "version": "0.1.0",
+  "description": "Scratch-notebook context management for any project: per-thread STATE.md handoff docs, a compiled parallel-session-safe INDEX dashboard (/ccx:save-state · /ccx:start-thread · /ccx:tidy-scratch), plus graph-backlink and script-hygiene hooks. Language-agnostic, no ticket system required.",
+  "license": "MIT",
+  "keywords": ["context", "notebook", "scratch", "state", "handoff", "memory"],
+  "hooks": "./hooks/hooks.json"
+}

@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${CLAUDE_PLUGIN_ROOT}/scripts/block-stray-scripts.ts\"",
+            "timeout": 15,
+            "statusMessage": "ccx hygiene gate"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${CLAUDE_PLUGIN_ROOT}/scripts/backlink-scratch-notes.ts\"",
+            "timeout": 15,
+            "statusMessage": "ccx: linking note into graph"
+          }
+        ]
+      }
+    ]
+  }
+}
