@@ -1,12 +1,15 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "ccx-context-system",
-  "owner": { "name": "personal" },
+  "owner": { "name": "ofcRS", "url": "https://github.com/ofcRS" },
   "description": "Portable .scratch/STATE/INDEX context-management methodology as a Claude Code plugin.",
   "plugins": [
     {
       "name": "ccx",
       "source": "./plugins/ccx",
-      "description": "Portable scratch-notebook core: per-thread STATE.md handoffs + compiled INDEX dashboard, 3 skills + 2 hooks. Language-agnostic, no ticket system required."
+      "description": "Portable scratch-notebook core: per-thread STATE.md handoffs + compiled INDEX dashboard, 3 skills + 2 hooks. Language-agnostic, no ticket system required.",
+      "category": "productivity",
+      "homepage": "https://github.com/ofcRS/ccx-context-system"
     }
   ]
 }

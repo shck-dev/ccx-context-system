@@ -1,2 +1,6 @@
 .DS_Store
 tests/.fixture/
+.env
+.env.*
+!.env.example
+.claude/
