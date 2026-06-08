@@ -1,7 +1,8 @@
 # On every published release: notify the shck.dev blog repo (repository_dispatch).
 # The blog then (a) rebuilds /changelog from this repo's releases.atom and (b) opens a
-# draft announcement-post PR. Requires secret BLOG_DISPATCH_TOKEN — a fine-grained PAT
-# scoped to ofcRS/shck.dev with Contents: read+write.
+# draft announcement-post PR. Needs secret BLOG_DISPATCH_TOKEN — a fine-grained PAT scoped to
+# ofcRS/shck.dev with Contents: read+write. If the secret is absent the job logs a ::warning::
+# and exits 0 (fail-soft), so a release never shows a red X for a missing optional notification.
 name: announce-release
 
 on:
@@ -20,6 +21,10 @@ jobs:
           URL: ${{ github.event.release.html_url }}
           BODY: ${{ github.event.release.body }}
         run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning title=announce-release skipped::BLOG_DISPATCH_TOKEN secret is not set — skipping blog dispatch for ${TAG}. Add the secret to enable changelog + announcement automation."
+            exit 0
+          fi
           jq -n \
             --arg tool "ccx" \
             --arg repo "$GITHUB_REPOSITORY" \
