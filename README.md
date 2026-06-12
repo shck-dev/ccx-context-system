@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="assets/icon.png" width="128" alt="ccx — scratch notebook with threads branching into a graph" />
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="assets/icon-dark.png" />
+    <img src="assets/icon.png" width="128" alt="ccx — Claude Code context system" />
+  </picture>
 </p>
 
 # ccx-context-system

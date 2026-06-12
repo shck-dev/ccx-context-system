@@ -1,0 +1,14 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- transparent background — light wordmark for dark surfaces -->
+  <g stroke="#F2ECE0" stroke-width="36" stroke-linecap="round" fill="none">
+    <!-- c (1) -->
+    <path d="M146.4 287.4 A41 41 0 1 1 146.4 224.6"/>
+    <!-- c (2) -->
+    <path d="M262.4 287.4 A41 41 0 1 1 262.4 224.6"/>
+    <!-- x -->
+    <path d="M310 198 L394 314"/>
+    <path d="M310 314 L394 198"/>
+  </g>
+  <!-- coral terminal cursor -->
+  <rect x="416" y="196" width="34" height="120" rx="11" fill="#D97757"/>
+</svg>
