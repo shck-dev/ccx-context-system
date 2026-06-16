@@ -19,8 +19,8 @@ export type CcxConfig = {
   ticket_system: "none" | "linear" | "github";
   /** How one-off scripts are run in this project (referenced by scaffolded STATE docs). */
   oneoff_script_runner: string;
-  /** block-stray-scripts hook: where script files are legitimate + which extensions are policed. */
-  script_allowlist: { dirs: string[]; extensions: string[] };
+  /** Extensions counted as "scripts" when scan.ts reports on a scratch thread. */
+  script_extensions: string[];
   /** INDEX H1 suffix; null → the project dir name. */
   index_title: string | null;
 };
@@ -32,16 +32,7 @@ export const DEFAULTS: CcxConfig = {
   archive_dir: "_archive",
   ticket_system: "none",
   oneoff_script_runner: "bun",
-  script_allowlist: {
-    // Multi-language spread: JS/TS, Python, Go, Rust, JVM, generic. `/test` (no trailing slash)
-    // deliberately also matches /tests/, /testdata/; `/spec` matches /specs/.
-    dirs: [
-      "/src/", "/lib/", "/app/", "/test", "/spec", "/scripts/", "/tools/", "/bin/",
-      "/migrations/", "/cmd/", "/internal/", "/pkg/", "/examples/",
-      "/node_modules/", "/dist/", "/build/", "/target/", "/vendor/", "/.venv/", "/.claude/",
-    ],
-    extensions: ["ts", "js", "mjs", "cjs", "py", "sh"],
-  },
+  script_extensions: ["ts", "js", "mjs", "cjs", "py", "sh"],
   index_title: null,
 };
 
@@ -57,11 +48,7 @@ export function loadConfig(root: string = projectRoot()): CcxConfig {
   if (!existsSync(p)) return DEFAULTS;
   try {
     const user = JSON.parse(readFileSync(p, "utf8"));
-    return {
-      ...DEFAULTS,
-      ...user,
-      script_allowlist: { ...DEFAULTS.script_allowlist, ...(user.script_allowlist ?? {}) },
-    };
+    return { ...DEFAULTS, ...user };
   } catch {
     return DEFAULTS;
   }

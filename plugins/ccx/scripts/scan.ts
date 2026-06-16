@@ -13,7 +13,7 @@ import { loadConfig, projectRoot } from "./lib/config";
 const root = projectRoot();
 const cfg = loadConfig(root);
 const SCRATCH = join(root, cfg.scratch_root);
-const SCRIPT = new RegExp(`\\.(${cfg.script_allowlist.extensions.join("|")})$`);
+const SCRIPT = new RegExp(`\\.(${cfg.script_extensions.join("|")})$`);
 const now = Date.now();
 
 let top: string[];

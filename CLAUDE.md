@@ -19,7 +19,7 @@ Three layers, all under `plugins/ccx/`:
 
 1. **Skills** (`skills/*/SKILL.md`) — `start-thread`, `save-state`, `tidy-scratch`. Markdown with frontmatter; they inject live data at load time via `` !`bun "${CLAUDE_PLUGIN_ROOT}/scripts/<x>.ts"` `` preamble commands, then instruct the model. Skills never re-implement logic that scripts own (e.g. slugging goes through `slug.ts`).
 2. **Scripts** (`scripts/*.ts`) — deterministic bun CLIs the skills call: `where.ts` (resolved context), `threads.ts` / `orphans.ts` / `scan.ts` (read-only scans), `slug.ts`, `compile-index.ts` (the INDEX compiler).
-3. **Hooks** (`hooks/hooks.json` → scripts) — `block-stray-scripts.ts` (PreToolUse on Write: denies script files outside allowlisted dirs/scratch root) and `backlink-scratch-notes.ts` (PostToolUse on Write: prepends a `[[STATE]]` wikilink to new unlinked scratch notes). Hooks read the tool-call JSON from stdin and **fail open** — any parse error or unexpected input → `exit 0`; a hook must never crash the session.
+3. **Hooks** (`hooks/hooks.json` → scripts) — `backlink-scratch-notes.ts` (PostToolUse on Write: prepends a `[[STATE]]` wikilink to new unlinked scratch notes). Hooks read the tool-call JSON from stdin and **fail open** — any parse error or unexpected input → `exit 0`; a hook must never crash the session.
 
 ### Load-bearing seams
 

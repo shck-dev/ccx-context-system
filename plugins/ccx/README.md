@@ -13,7 +13,6 @@ Extracted from a production setup where the methodology ran for weeks across ~30
 | `/ccx:start-thread <topic>` | Scaffolds `.scratch/<slug>/STATE.md` (frontmatter + handoff template) |
 | `/ccx:save-state` | The dashboard: refresh STATE frontmatter → compile INDEX → ≤6-line summary |
 | `/ccx:tidy-scratch` | Date-aware GC: dry-run plan → confirm → archive/delete → reindex |
-| `block-stray-scripts` hook | Denies throwaway scripts written outside the notebook / source dirs |
 | `backlink-scratch-notes` hook | Auto-clusters new notes under their thread's STATE (Obsidian graph hygiene) |
 
 **Prerequisite:** `bun` on PATH.
@@ -39,10 +38,7 @@ Zero-config works. To customize, commit `methodology.config.json` at the project
   "ticket_system": "none",           // v1: none (linear/github adapters are future work)
   "oneoff_script_runner": "bun",     // referenced in scaffolded STATE docs
   "index_title": null,               // INDEX H1; null → project dir name
-  "script_allowlist": {              // block-stray-scripts hook tuning
-    "dirs": ["/src/", "/lib/", "..."],          // where scripts are legitimate
-    "extensions": ["ts", "js", "mjs", "cjs", "py", "sh"]  // what gets policed
-  }
+  "script_extensions": ["ts", "js", "mjs", "cjs", "py", "sh"]  // what scan counts as a script
 }
 ```
 

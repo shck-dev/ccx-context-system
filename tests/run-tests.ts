@@ -81,7 +81,7 @@ const FIX2 = join(base, "proj-custom");
 mkdirSync(join(FIX2, "notes", "t"), { recursive: true });
 writeFileSync(
   join(FIX2, "methodology.config.json"),
-  JSON.stringify({ scratch_root: "notes", script_allowlist: { dirs: ["/source/"] } }, null, 2),
+  JSON.stringify({ scratch_root: "notes", script_extensions: ["ts", "py", "rb"] }, null, 2),
 );
 writeFileSync(join(FIX2, "notes", "t", "STATE.md"), "---\ntitle: t\nkind: thread\nsummary: 'custom-root thread'\n---\n# t\n**Status:** alive\n");
 
@@ -93,9 +93,9 @@ const { loadConfig, DEFAULTS } = await import(join(SCRIPTS, "lib", "config.ts"))
 ok("defaults when no config file", loadConfig(FIX).scratch_root === ".scratch" && loadConfig(FIX) === DEFAULTS);
 ok("file overrides scratch_root", loadConfig(FIX2).scratch_root === "notes");
 ok(
-  "allowlist merge keeps default extensions when only dirs overridden",
-  loadConfig(FIX2).script_allowlist.dirs.includes("/source/") &&
-    loadConfig(FIX2).script_allowlist.extensions.includes("py"),
+  "file overrides script_extensions wholesale",
+  loadConfig(FIX2).script_extensions.includes("rb") &&
+    !loadConfig(FIX2).script_extensions.includes("sh"),
 );
 
 // ---------- identity ----------
@@ -159,20 +159,6 @@ ok("gamma has STATE=NO", scLines.some((l) => l.startsWith("gamma\tNO")));
 const gammaAge = parseInt(scLines.find((l) => l.startsWith("gamma"))?.split("\t")[5] ?? "-1", 10);
 ok("gamma age ≥ 19 days", gammaAge >= 19);
 ok("archive + .obsidian not scanned", !sc.includes("_archive") && !sc.includes(".obsidian"));
-
-// ---------- block-stray-scripts hook ----------
-console.log("block-stray-scripts.ts");
-const stray = (file_path: string, tool = "Write", root = FIX) =>
-  run("block-stray-scripts.ts", { root, stdin: JSON.stringify({ tool_name: tool, tool_input: { file_path }, cwd: root }) });
-const denied = (r: { out: string }) => r.out.includes('"permissionDecision":"deny"');
-ok("root junk.py → DENY", denied(stray(join(FIX, "junk.py"))));
-ok("scratch probe2.py → pass", !denied(stray(join(S, "gamma", "probe2.py"))) );
-ok("internal/x.py → pass (source dir)", !denied(stray(join(FIX, "internal", "x.py"))));
-ok("main.go → pass (unpoliced extension)", !denied(stray(join(FIX, "tool.go"))));
-ok("Edit tool → pass", !denied(stray(join(FIX, "junk.py"), "Edit")));
-ok("foo.config.js → pass (config file)", !denied(stray(join(FIX, "foo.config.js"))));
-ok("custom root notes/t/x.py → pass", !denied(stray(join(FIX2, "notes", "t", "x.py"), "Write", FIX2)));
-ok("custom root junk.sh → DENY", denied(stray(join(FIX2, "junk.sh"), "Write", FIX2)));
 
 // ---------- backlink hook ----------
 console.log("backlink-scratch-notes.ts");
