@@ -38,9 +38,15 @@ Zero-config works. To customize, commit `methodology.config.json` at the project
   "ticket_system": "none",           // v1: none (linear/github adapters are future work)
   "oneoff_script_runner": "bun",     // referenced in scaffolded STATE docs
   "index_title": null,               // INDEX H1; null → project dir name
-  "script_extensions": ["ts", "js", "mjs", "cjs", "py", "sh"]  // what scan counts as a script
+  "script_extensions": ["ts", "js", "mjs", "cjs", "py", "sh"],  // what scan counts as a script
+  "extra_sections": []               // live INDEX sections: [{"title": "Environment", "command": "bun scripts/env.ts"}]
 }
 ```
+
+`extra_sections` lets a project inject live sections into the compiled INDEX (environment
+probes, service health, anything a command can print). Each command runs at compile time with
+a 5s cap; empty or failing output omits the section. Note the INDEX stays a pure render — if
+your command's output varies run-to-run, so will those INDEX bytes.
 
 ## Obsidian (optional but recommended)
 

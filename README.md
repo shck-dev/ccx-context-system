@@ -33,4 +33,4 @@ project's own language).
 - Try changes in one session only: `claude --plugin-dir ./plugins/ccx`.
 - Validate structure: `claude plugin validate ./plugins/ccx` (and `claude plugin validate .`).
 - Tests: `bun tests/run-tests.ts` — application-scenario harness against fixture non-Node
-  projects (stock + custom config), covering every script and both hooks.
+  projects (stock + custom config), covering every script and the backlink hook.

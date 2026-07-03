@@ -36,7 +36,11 @@ prints a plan and touches nothing until you confirm. If the scratch dir is not v
      thread's topic/branch.
    - **ARCHIVE (likely done)** — has a STATE doc AND `age > 30` AND no open PR. (Longer threshold
      than a ticket-oracle setup would use: age alone must be more patient.)
-   - **DELETE (throwaway)** — `STATE = NO` AND `age > 14` (no handoff value + cold).
+   - **ADOPT (unfiled work)** — `STATE = NO` AND `files > 3` — too much accumulated work to be
+     throwaway; propose creating a STATE doc for it (offer /ccx:start-thread), never delete in
+     this pass.
+   - **DELETE (throwaway)** — `STATE = NO` AND `age > 14` AND `files ≤ 3` (no handoff value +
+     cold + tiny).
    - **DELETE (empty)** — `files = 0`.
    - **FLAG → default KEEP (unsure)** — anything that fits no rule above, and every `kind: hub`
      reference note. **Never auto-propose deleting a folder that has a STATE doc.**
@@ -45,7 +49,7 @@ prints a plan and touches nothing until you confirm. If the scratch dir is not v
    | item | class | proposed action | why | last edit (age) |
    |---|---|---|---|---|
 
-   End with a one-line tally: `N delete · M archive · rest keep`.
+   End with a one-line tally: `N delete · M archive · K adopt · rest keep`.
 3. **Confirm.** Ask: apply **all**, a **subset** (named), or **none**. Wait for the answer.
 4. **Execute only what was approved**, echoing each action (paths from the injected config block):
    - **archive:** `mkdir -p <scratch_root>/<archive_dir> && mv <scratch_root>/<slug> <scratch_root>/<archive_dir>/`,
@@ -57,8 +61,9 @@ prints a plan and touches nothing until you confirm. If the scratch dir is not v
 ## Safety rails (non-negotiable)
 
 - **Dry-run is mandatory** — never delete, move, or prune before the step-3 confirmation.
-- **Hard `rm` is only ever proposed for folders with no STATE doc.** Anything carrying a STATE is
-  *archived* (moved under the archive dir), never deleted — its handoff notes survive.
+- **Hard `rm` is only ever proposed for folders with no STATE doc AND ≤3 files.** Anything
+  carrying a STATE — or carrying real bulk (>3 files) — is *archived* or *adopted*, never
+  deleted; its work survives.
 - **When unsure, archive, don't delete** — without a ticket system there is no authoritative
   "this is finished" signal, only age.
 - **Reads the clock every run** (`scan.ts` + `date`) — no date is ever hardcoded, not even the

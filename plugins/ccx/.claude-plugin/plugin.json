@@ -1,7 +1,7 @@
 {
   "name": "ccx",
   "displayName": "ccx — portable notebook core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Scratch-notebook context management for any project: per-thread STATE.md handoff docs, a compiled parallel-session-safe INDEX dashboard (/ccx:save-state · /ccx:start-thread · /ccx:tidy-scratch), plus a graph-backlink hook for Obsidian. Language-agnostic, no ticket system required.",
   "license": "MIT",
   "author": { "name": "shck-dev", "url": "https://github.com/shck-dev" },

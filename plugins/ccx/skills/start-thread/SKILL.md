@@ -30,6 +30,9 @@ Topic requested: **$ARGUMENTS**
    a thread is any unit of work; ticket-system adapters may extend this later.
 3. **Guard:** if `<scratch_root>/<slug>/` already has a STATE doc (see the injected config block
    for the real paths), STOP — show its first heading and offer to open it instead of clobbering.
+   Treat slugs as the SAME thread when they match ignoring case and separators (`CP-1758` ≡
+   `cp-1758` ≡ `cp1758` — the `normalizeForMatch` rule in `scripts/lib/identity.ts`): a
+   near-match in the existing-threads list above → STOP the same way and offer the existing one.
 4. **Seed the ask from the conversation** — there is no ticket system to pull from. If the goal
    isn't clear from context, ask for one line. Mark anything unknown as TODO rather than inventing.
 5. **Create** `<scratch_root>/<slug>/` and write the STATE doc from the template below, filling

@@ -7,7 +7,7 @@
     {
       "name": "ccx",
       "source": "./plugins/ccx",
-      "description": "Portable scratch-notebook core: per-thread STATE.md handoffs + compiled INDEX dashboard, 3 skills + 2 hooks. Language-agnostic, no ticket system required.",
+      "description": "Portable scratch-notebook core: per-thread STATE.md handoffs + compiled INDEX dashboard, 3 skills + a graph-backlink hook. Language-agnostic, no ticket system required.",
       "category": "productivity",
       "homepage": "https://github.com/shck-dev/ccx-context-system"
     }

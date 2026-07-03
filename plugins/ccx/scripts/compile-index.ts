@@ -14,6 +14,7 @@ import { readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "
 import { basename, join } from "node:path";
 import { execSync } from "node:child_process";
 import { loadConfig, projectRoot } from "./lib/config";
+import { clip } from "./lib/text";
 
 const ROOT = projectRoot();
 const cfg = loadConfig(ROOT);
@@ -57,19 +58,19 @@ for (const slug of slugs) {
     continue;
   }
   if (!st.isFile()) continue;
-  const txt = readFileSync(p, "utf8");
+  const txt = readFileSync(p, "utf8").replace(/\r\n/g, "\n");
   const fm = parseFrontmatter(txt);
   const kind = (fm.kind || "thread").toLowerCase();
   const summary =
     fm.summary ||
     txt.match(/^\*\*Status:\*\*\s*(.+)$/m)?.[1]?.trim().split(/(?<=\.)\s/)[0] ||
     "(no summary — add `summary:` to this STATE's frontmatter)";
-  all.push({ slug, kind, summary, mtime: st.mtimeMs });
+  all.push({ slug, kind, summary: clip(summary, 240), mtime: st.mtimeMs });
 }
 
 const live = (cmd: string) => {
   try {
-    return execSync(cmd, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trimEnd();
+    return execSync(cmd, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 }).trimEnd();
   } catch {
     return "";
   }
@@ -85,6 +86,10 @@ const today = new Date().toISOString().slice(0, 10);
 const title = cfg.index_title ?? basename(ROOT);
 const worktrees = live("git worktree list");
 const prs = live("gh pr list --limit 12");
+const extras = cfg.extra_sections.flatMap((s) => {
+  const out = live(s.command);
+  return out ? [`## ${s.title}`, out, ""] : [];
+});
 
 const md = [
   `# Work INDEX — ${title}`,
@@ -93,6 +98,7 @@ const md = [
   `> \`${cfg.scratch_root}/<thread>/${cfg.state_basename}\` frontmatter (\`summary\`/\`kind\`) + live git — never hand-edited`,
   `> (concurrency-safe: a pure render, atomic write). Detail lives in each STATE. Compiled: ${today}.`,
   "",
+  ...extras,
   "## Active threads",
   ...(active.length
     ? active.map((t) => `- **${t.slug}** — ${t.summary} → [[${t.slug}/${stateLink}]]`)

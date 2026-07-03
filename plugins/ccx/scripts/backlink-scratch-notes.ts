@@ -6,6 +6,7 @@
 // rewrites existing lines); no-ops if the note already links anywhere. Disable via /hooks.
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join, resolve, sep } from "node:path";
 import { loadConfig } from "./lib/config";
 
 const raw = await Bun.stdin.text();
@@ -20,21 +21,26 @@ if (data?.tool_name !== "Write") process.exit(0);
 const fp: string = data?.tool_input?.file_path ?? "";
 if (!fp) process.exit(0);
 
-const cfg = loadConfig(process.env.CLAUDE_PROJECT_DIR || data?.cwd || process.cwd());
-if (fp.includes(`/${cfg.archive_dir}/`)) process.exit(0); // archived notes are retired — leave them
+const root = process.env.CLAUDE_PROJECT_DIR || data?.cwd || process.cwd();
+const cfg = loadConfig(root);
 
-// Must be a note inside a thread subdir of the scratch root — not STATE/INDEX, not top-level.
-const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const m = fp.match(new RegExp(`${esc(cfg.scratch_root)}/([^/]+)/([^/]+)\\.md$`));
-if (!m) process.exit(0);
-const [, dir, base] = m;
+// Anchored: only notes under THIS project's scratch root, exactly one thread-dir deep.
+const scratchAbs = resolve(root, cfg.scratch_root);
+const fpAbs = resolve(root, fp);
+if (!fpAbs.startsWith(scratchAbs + sep)) process.exit(0);
+const rel = fpAbs.slice(scratchAbs.length + 1).split(sep);
+if (rel.length !== 2) process.exit(0); // top-level or nested — not a thread note
+const [dir, name] = rel;
+if (dir === cfg.archive_dir || dir.startsWith(".")) process.exit(0); // archive + vault plumbing
+if (!name.endsWith(".md")) process.exit(0);
+const base = name.slice(0, -3);
 const stateLink = cfg.state_basename.replace(/\.md$/, "");
 const indexLink = cfg.index_basename.replace(/\.md$/, "");
 if (base === stateLink || base === indexLink) process.exit(0);
 
 let content = "";
 try {
-  content = readFileSync(fp, "utf8");
+  content = readFileSync(fpAbs, "utf8");
 } catch {
   process.exit(0);
 }
@@ -42,12 +48,12 @@ if (content.includes("[[")) process.exit(0); // already part of the graph — le
 
 // Clean hierarchy: link the thread's STATE hub if it exists (STATE → INDEX carries the spine);
 // only fall back to [[INDEX]] for a dir with no STATE.
-const dirAbs = fp.slice(0, fp.lastIndexOf("/"));
+const dirAbs = join(scratchAbs, dir);
 const hasState = existsSync(`${dirAbs}/${cfg.state_basename}`);
 const target = hasState ? `[[${stateLink}]]` : `[[${indexLink}]]`;
 
 try {
-  writeFileSync(fp, `> ${target}\n\n` + content);
+  writeFileSync(fpAbs, `> ${target}\n\n` + content);
 } catch {
   process.exit(0);
 }

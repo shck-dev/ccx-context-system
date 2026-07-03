@@ -61,6 +61,9 @@ writeFileSync(join(FIX, "main.go"), "package main\n\nfunc main() {}\n");
 state("alpha", "thread", "alpha work in flight");
 state("beta", "hub", "reference hub note");
 state("delta", "done", "shipped last month");
+state("longsum", "thread", "L".repeat(500));
+const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000);
+utimesSync(join(S, "longsum", "STATE.md"), twoDaysAgo, twoDaysAgo);
 writeFileSync(join(S, "alpha", "note.md"), "> [[STATE]]\n\nlinked note\n");
 writeFileSync(join(S, "alpha", "orphan.md"), "an unlinked note\n");
 mkdirSync(join(S, "gamma"), { recursive: true });
@@ -81,9 +84,43 @@ const FIX2 = join(base, "proj-custom");
 mkdirSync(join(FIX2, "notes", "t"), { recursive: true });
 writeFileSync(
   join(FIX2, "methodology.config.json"),
-  JSON.stringify({ scratch_root: "notes", script_extensions: ["ts", "py", "rb"] }, null, 2),
+  JSON.stringify(
+    {
+      scratch_root: "notes",
+      script_extensions: ["ts", "py", "rb"],
+      extra_sections: [
+        { title: "Environment", command: "echo '- probe UP'" },
+        { title: "Broken", command: "false" },
+        { title: "", command: "echo skipped-invalid" },
+      ],
+    },
+    null,
+    2,
+  ),
 );
 writeFileSync(join(FIX2, "notes", "t", "STATE.md"), "---\ntitle: t\nkind: thread\nsummary: 'custom-root thread'\n---\n# t\n**Status:** alive\n");
+mkdirSync(join(FIX2, "notes", "crlf"), { recursive: true });
+writeFileSync(
+  join(FIX2, "notes", "crlf", "STATE.md"),
+  "---\r\ntitle: crlf\r\nkind: done\r\nsummary: 'windows line endings'\r\n---\r\n\r\n# crlf\r\n**Status:** parsed fine\r\n",
+);
+
+// ---------- fixture 3: wrong-TYPED config values (must all fall back per-field) ----------
+const FIX3 = join(base, "proj-badcfg");
+mkdirSync(join(FIX3, ".scratch", "t"), { recursive: true });
+writeFileSync(
+  join(FIX3, "methodology.config.json"),
+  JSON.stringify({
+    scratch_root: "",
+    script_extensions: "ts",
+    ticket_system: "jira",
+    archive_dir: "a/b",
+    index_title: 7,
+    state_basename: 42,
+    extra_sections: { title: "x" },
+  }),
+);
+writeFileSync(join(FIX3, ".scratch", "t", "STATE.md"), "---\ntitle: t\nkind: thread\nsummary: 'ok'\n---\n# t\n**Status:** alive\n");
 
 console.log(`fixtures at ${base}\n`);
 
@@ -97,12 +134,43 @@ ok(
   loadConfig(FIX2).script_extensions.includes("rb") &&
     !loadConfig(FIX2).script_extensions.includes("sh"),
 );
+const badCfg = loadConfig(FIX3);
+ok("wrong-typed fields fall back per-field", badCfg.scratch_root === ".scratch" && badCfg.archive_dir === "_archive" && badCfg.ticket_system === "none" && badCfg.index_title === null && badCfg.state_basename === "STATE.md");
+ok("string script_extensions falls back to default array", Array.isArray(badCfg.script_extensions) && badCfg.script_extensions.includes("sh"));
+ok("non-array extra_sections falls back to []", Array.isArray(badCfg.extra_sections) && badCfg.extra_sections.length === 0);
+ok("valid fields still apply alongside invalid ones", loadConfig(FIX2).scratch_root === "notes");
+const FIX4 = join(base, "proj-dotslash");
+mkdirSync(join(FIX4, "notes2", "t"), { recursive: true });
+writeFileSync(
+  join(FIX4, "methodology.config.json"),
+  JSON.stringify({ scratch_root: "./notes2/", extra_sections: [{ title: "  Env\nX  ", command: " echo hi " }] }),
+);
+const dot = loadConfig(FIX4);
+ok("./-prefix and trailing slash normalize instead of falling back", dot.scratch_root === "notes2");
+ok("extra_sections title/command are trimmed and newline-free",
+  dot.extra_sections[0].title === "Env X" && dot.extra_sections[0].command === "echo hi");
+const scBad = run("scan.ts", { root: FIX3 });
+ok("scan.ts survives a wrong-typed config", scBad.code === 0 && scBad.out.includes("t\tyes"));
+
+// ---------- text ----------
+console.log("text.ts");
+const { clip } = await import(join(SCRIPTS, "lib", "text.ts"));
+const clipped = clip("a".repeat(238) + "😀😀", 240);
+ok("clip never splits a surrogate pair", clipped.isWellFormed() && clipped.endsWith("…") && clipped.length <= 240);
 
 // ---------- identity ----------
 console.log("identity.ts");
 const { slugify } = await import(join(SCRIPTS, "lib", "identity.ts"));
 ok('slugify("Fix Auth Redirect!")', slugify("Fix Auth Redirect!") === "fix-auth-redirect");
-ok('slugify("héllo wörld") (non-ascii → dashes)', slugify("héllo wörld") === "h-llo-w-rld");
+ok('slugify("héllo wörld") keeps unicode letters', slugify("héllo wörld") === "héllo-wörld");
+ok('slugify("Исправить Баг") stays readable', slugify("Исправить Баг") === "исправить-баг");
+const { normalizeForMatch } = await import(join(SCRIPTS, "lib", "identity.ts"));
+ok("normalizeForMatch: CP-1758 ≡ cp1758 ≡ cp-1758",
+  normalizeForMatch("CP-1758") === "cp1758" && normalizeForMatch("cp-1758") === "cp1758" && normalizeForMatch("cp1758") === "cp1758");
+ok("slugify never splits a surrogate pair at the 60 cut", slugify("a".repeat(59) + "𝔸b").isWellFormed());
+const nfd = "héllo wörld".normalize("NFD"); // macOS-style decomposed input (byte-distinct from NFC)
+ok("NFD input ≡ NFC input (slug + match)",
+  slugify(nfd) === "héllo-wörld" && normalizeForMatch(nfd) === normalizeForMatch("héllo wörld"));
 ok('slugify("___") falls back to "thread"', slugify("___") === "thread");
 const longSlug = slugify("x".repeat(80) + " tail");
 ok("slugify truncates ≤60, no trailing dash", longSlug.length <= 60 && !longSlug.endsWith("-"));
@@ -116,14 +184,16 @@ ok("CLI with no args exits non-zero", run("slug.ts").code !== 0);
 console.log("where.ts");
 const w = run("where.ts", { root: FIX }).out;
 ok("prints project root", w.includes(`project root: ${FIX}`));
-ok("prints plugin root + 3 threads", w.includes(`plugin root: ${PLUGIN}`) && w.includes("3 thread(s)"));
+ok("prints plugin root + 4 threads", w.includes(`plugin root: ${PLUGIN}`) && w.includes("4 thread(s)"));
 
 // ---------- threads ----------
 console.log("threads.ts");
 const t = run("threads.ts", { root: FIX }).out;
 ok("default mode lists alpha with status", t.includes("**alpha**") && t.includes("status: alpha work in flight"));
 const slugs = run("threads.ts", { root: FIX, args: ["--slugs"] }).out.trim().split("\n");
-ok("--slugs = exactly alpha,beta,delta", slugs.join(",") === "alpha,beta,delta");
+ok("--slugs = exactly alpha,beta,delta,longsum", slugs.join(",") === "alpha,beta,delta,longsum");
+const longStatus = t.split("\n").find((l) => l.includes("LLLL")) ?? "";
+ok("oversized status clipped to ≤200 chars + ellipsis", longStatus.includes("…") && longStatus.trim().length < 220);
 
 // ---------- orphans ----------
 console.log("orphans.ts");
@@ -148,13 +218,28 @@ ok("no leftover .tmp files", !readdirSync(S).some((f) => f.includes(".tmp.")));
 run("compile-index.ts", { root: FIX });
 ok("double-compile byte-identical", readFileSync(INDEX, "utf8") === idx);
 ok("non-git fixture: no Worktrees/PRs sections", !idx.includes("## Worktrees") && !idx.includes("## Open PRs"));
-ok("compile reports counts", c1.out.includes("compiled 1 active · 1 hubs · 1 done"));
+ok("compile reports counts", c1.out.includes("compiled 2 active · 1 hubs · 1 done"));
+const longLine = idx.split("\n").find((l) => l.includes("**longsum**")) ?? "";
+ok("oversized summary clipped to ≤240 chars + ellipsis", longLine.includes("…") && longLine.length < 300);
+
+// ---------- compile-index: custom root + CRLF ----------
+console.log("compile-index.ts (custom root, CRLF)");
+run("compile-index.ts", { root: FIX2 });
+const idx2 = readFileSync(join(FIX2, "notes", "INDEX.md"), "utf8");
+ok("CRLF STATE lands in Done with parsed summary", /## Done[\s\S]*\*\*crlf\*\* — windows line endings/.test(idx2));
+ok("CRLF STATE absent from Active", !/## Active threads[\s\S]*\*\*crlf\*\*[\s\S]*## Notes/.test(idx2));
+const t2 = run("threads.ts", { root: FIX2 }).out;
+ok("threads.ts reads CRLF Status without stray \\r", t2.includes("status: parsed fine") && !t2.includes("\r"));
+ok("extra section rendered from config command", /## Environment\n- probe UP/.test(idx2));
+ok("failing extra command → section omitted", !idx2.includes("## Broken"));
+ok("invalid extra entry ignored", !idx2.includes("skipped-invalid"));
+ok("extra section sits before Active threads", idx2.indexOf("## Environment") < idx2.indexOf("## Active threads"));
 
 // ---------- scan ----------
 console.log("scan.ts");
 const sc = run("scan.ts", { root: FIX }).out;
 const scLines = sc.trim().split("\n").filter((l) => !l.startsWith("#"));
-ok("4 rows (alpha,beta,gamma,delta)", scLines.length === 4);
+ok("5 rows (alpha,beta,gamma,delta,longsum)", scLines.length === 5);
 ok("gamma has STATE=NO", scLines.some((l) => l.startsWith("gamma\tNO")));
 const gammaAge = parseInt(scLines.find((l) => l.startsWith("gamma"))?.split("\t")[5] ?? "-1", 10);
 ok("gamma age ≥ 19 days", gammaAge >= 19);
@@ -182,6 +267,18 @@ ok("archived note untouched", readFileSync(join(S, "_archive", "old", "note.md")
 const stateBefore = readFileSync(join(S, "alpha", "STATE.md"), "utf8");
 backlink(join(S, "alpha", "STATE.md"));
 ok("STATE.md itself untouched", readFileSync(join(S, "alpha", "STATE.md"), "utf8") === stateBefore);
+const OTHER = join(base, "other-proj", ".scratch", "x");
+mkdirSync(OTHER, { recursive: true });
+writeFileSync(join(OTHER, "n.md"), "unlinked note outside the project\n");
+backlink(join(OTHER, "n.md")); // hook runs with root = FIX — must not touch a foreign .scratch
+ok("note under another project's .scratch untouched", readFileSync(join(OTHER, "n.md"), "utf8") === "unlinked note outside the project\n");
+mkdirSync(join(S, "alpha", "sub"), { recursive: true });
+writeFileSync(join(S, "alpha", "sub", "deep.md"), "nested note\n");
+backlink(join(S, "alpha", "sub", "deep.md"));
+ok("nested note untouched (only direct children of a thread dir)", readFileSync(join(S, "alpha", "sub", "deep.md"), "utf8") === "nested note\n");
+writeFileSync(join(S, ".obsidian", "stray.md"), "vault plumbing\n");
+backlink(join(S, ".obsidian", "stray.md"));
+ok("dot-dir note untouched", readFileSync(join(S, ".obsidian", "stray.md"), "utf8") === "vault plumbing\n");
 
 // ---------- summary ----------
 console.log(`\n${pass}/${pass + fail} passed${fail ? ` — FAILED: ${bad.join(" | ")}` : ""}`);

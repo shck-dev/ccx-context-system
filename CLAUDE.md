@@ -8,7 +8,7 @@ A Claude Code **plugin marketplace** repo whose single plugin, `ccx` (`plugins/c
 
 ## Commands
 
-- **Tests:** `bun tests/run-tests.ts` — single-file scenario harness (no test framework; `ok()` assertions, exits non-zero on failure). It builds fresh fixture projects in a tmpdir each run (a fake Go project on stock config + a custom-config project) and exercises every script and both hooks. There is no per-test runner; run the whole file.
+- **Tests:** `bun tests/run-tests.ts` — single-file scenario harness (no test framework; `ok()` assertions, exits non-zero on failure). It builds fresh fixture projects in a tmpdir each run (a fake Go project on stock config + a custom-config project) and exercises every script and the backlink hook. There is no per-test runner; run the whole file.
 - **Validate plugin structure:** `claude plugin validate ./plugins/ccx` (and `claude plugin validate .` for the marketplace).
 - **Try changes live in one session:** `claude --plugin-dir ./plugins/ccx`.
 - **Refresh an installed copy after edits:** `/plugin marketplace update ccx-context-system` (or restart the session).
