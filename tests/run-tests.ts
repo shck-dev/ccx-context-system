@@ -139,6 +139,16 @@ ok("wrong-typed fields fall back per-field", badCfg.scratch_root === ".scratch" 
 ok("string script_extensions falls back to default array", Array.isArray(badCfg.script_extensions) && badCfg.script_extensions.includes("sh"));
 ok("non-array extra_sections falls back to []", Array.isArray(badCfg.extra_sections) && badCfg.extra_sections.length === 0);
 ok("valid fields still apply alongside invalid ones", loadConfig(FIX2).scratch_root === "notes");
+const FIX4 = join(base, "proj-dotslash");
+mkdirSync(join(FIX4, "notes2", "t"), { recursive: true });
+writeFileSync(
+  join(FIX4, "methodology.config.json"),
+  JSON.stringify({ scratch_root: "./notes2/", extra_sections: [{ title: "  Env\nX  ", command: " echo hi " }] }),
+);
+const dot = loadConfig(FIX4);
+ok("./-prefix and trailing slash normalize instead of falling back", dot.scratch_root === "notes2");
+ok("extra_sections title/command are trimmed and newline-free",
+  dot.extra_sections[0].title === "Env X" && dot.extra_sections[0].command === "echo hi");
 const scBad = run("scan.ts", { root: FIX3 });
 ok("scan.ts survives a wrong-typed config", scBad.code === 0 && scBad.out.includes("t\tyes"));
 

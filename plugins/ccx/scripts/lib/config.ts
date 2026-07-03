@@ -57,14 +57,20 @@ function sanitize(user: unknown): Partial<CcxConfig> {
     !v.split("/").some((seg) => seg === "" || seg === "." || seg === "..");
   const isBasename = (v: unknown): v is string =>
     typeof v === "string" && v.length > 0 && !v.includes("/") && !v.includes("\\") && v !== "." && v !== "..";
-  if (isRelPath(u.scratch_root)) out.scratch_root = u.scratch_root;
+  const normRel = (v: unknown): string | null => {
+    if (typeof v !== "string") return null;
+    const n = v.replace(/^\.\//, "").replace(/\/+$/, "");
+    return isRelPath(n) ? n : null;
+  };
+  const scratchRoot = normRel(u.scratch_root);
+  if (scratchRoot !== null) out.scratch_root = scratchRoot;
   if (isBasename(u.state_basename)) out.state_basename = u.state_basename;
   if (isBasename(u.index_basename)) out.index_basename = u.index_basename;
   if (isBasename(u.archive_dir)) out.archive_dir = u.archive_dir;
   if (u.ticket_system === "none" || u.ticket_system === "linear" || u.ticket_system === "github")
     out.ticket_system = u.ticket_system;
   if (typeof u.oneoff_script_runner === "string" && u.oneoff_script_runner.trim().length > 0)
-    out.oneoff_script_runner = u.oneoff_script_runner;
+    out.oneoff_script_runner = u.oneoff_script_runner.trim();
   if (Array.isArray(u.script_extensions)) {
     const exts = u.script_extensions.filter((e): e is string => typeof e === "string" && /^[a-z0-9]+$/i.test(e));
     if (exts.length > 0) out.script_extensions = exts;
@@ -77,7 +83,7 @@ function sanitize(user: unknown): Partial<CcxConfig> {
         typeof s === "object" && s !== null &&
         typeof (s as Record<string, unknown>).title === "string" && ((s as Record<string, unknown>).title as string).trim().length > 0 &&
         typeof (s as Record<string, unknown>).command === "string" && ((s as Record<string, unknown>).command as string).trim().length > 0,
-    ).map((s) => ({ title: s.title, command: s.command }));
+    ).map((s) => ({ title: s.title.replace(/\s+/g, " ").trim(), command: s.command.trim() }));
   }
   return out;
 }

@@ -49,7 +49,7 @@ prints a plan and touches nothing until you confirm. If the scratch dir is not v
    | item | class | proposed action | why | last edit (age) |
    |---|---|---|---|---|
 
-   End with a one-line tally: `N delete · M archive · rest keep`.
+   End with a one-line tally: `N delete · M archive · K adopt · rest keep`.
 3. **Confirm.** Ask: apply **all**, a **subset** (named), or **none**. Wait for the answer.
 4. **Execute only what was approved**, echoing each action (paths from the injected config block):
    - **archive:** `mkdir -p <scratch_root>/<archive_dir> && mv <scratch_root>/<slug> <scratch_root>/<archive_dir>/`,
