@@ -84,7 +84,19 @@ const FIX2 = join(base, "proj-custom");
 mkdirSync(join(FIX2, "notes", "t"), { recursive: true });
 writeFileSync(
   join(FIX2, "methodology.config.json"),
-  JSON.stringify({ scratch_root: "notes", script_extensions: ["ts", "py", "rb"] }, null, 2),
+  JSON.stringify(
+    {
+      scratch_root: "notes",
+      script_extensions: ["ts", "py", "rb"],
+      extra_sections: [
+        { title: "Environment", command: "echo '- probe UP'" },
+        { title: "Broken", command: "false" },
+        { title: "", command: "echo skipped-invalid" },
+      ],
+    },
+    null,
+    2,
+  ),
 );
 writeFileSync(join(FIX2, "notes", "t", "STATE.md"), "---\ntitle: t\nkind: thread\nsummary: 'custom-root thread'\n---\n# t\n**Status:** alive\n");
 mkdirSync(join(FIX2, "notes", "crlf"), { recursive: true });
@@ -105,6 +117,7 @@ writeFileSync(
     archive_dir: "a/b",
     index_title: 7,
     state_basename: 42,
+    extra_sections: { title: "x" },
   }),
 );
 writeFileSync(join(FIX3, ".scratch", "t", "STATE.md"), "---\ntitle: t\nkind: thread\nsummary: 'ok'\n---\n# t\n**Status:** alive\n");
@@ -124,6 +137,7 @@ ok(
 const badCfg = loadConfig(FIX3);
 ok("wrong-typed fields fall back per-field", badCfg.scratch_root === ".scratch" && badCfg.archive_dir === "_archive" && badCfg.ticket_system === "none" && badCfg.index_title === null && badCfg.state_basename === "STATE.md");
 ok("string script_extensions falls back to default array", Array.isArray(badCfg.script_extensions) && badCfg.script_extensions.includes("sh"));
+ok("non-array extra_sections falls back to []", Array.isArray(badCfg.extra_sections) && badCfg.extra_sections.length === 0);
 ok("valid fields still apply alongside invalid ones", loadConfig(FIX2).scratch_root === "notes");
 const scBad = run("scan.ts", { root: FIX3 });
 ok("scan.ts survives a wrong-typed config", scBad.code === 0 && scBad.out.includes("t\tyes"));
@@ -198,6 +212,10 @@ ok("CRLF STATE lands in Done with parsed summary", /## Done[\s\S]*\*\*crlf\*\* â
 ok("CRLF STATE absent from Active", !/## Active threads[\s\S]*\*\*crlf\*\*[\s\S]*## Notes/.test(idx2));
 const t2 = run("threads.ts", { root: FIX2 }).out;
 ok("threads.ts reads CRLF Status without stray \\r", t2.includes("status: parsed fine") && !t2.includes("\r"));
+ok("extra section rendered from config command", /## Environment\n- probe UP/.test(idx2));
+ok("failing extra command â†’ section omitted", !idx2.includes("## Broken"));
+ok("invalid extra entry ignored", !idx2.includes("skipped-invalid"));
+ok("extra section sits before Active threads", idx2.indexOf("## Environment") < idx2.indexOf("## Active threads"));
 
 // ---------- scan ----------
 console.log("scan.ts");

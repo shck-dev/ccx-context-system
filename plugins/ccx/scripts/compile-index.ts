@@ -86,6 +86,10 @@ const today = new Date().toISOString().slice(0, 10);
 const title = cfg.index_title ?? basename(ROOT);
 const worktrees = live("git worktree list");
 const prs = live("gh pr list --limit 12");
+const extras = cfg.extra_sections.flatMap((s) => {
+  const out = live(s.command);
+  return out ? [`## ${s.title}`, out, ""] : [];
+});
 
 const md = [
   `# Work INDEX — ${title}`,
@@ -94,6 +98,7 @@ const md = [
   `> \`${cfg.scratch_root}/<thread>/${cfg.state_basename}\` frontmatter (\`summary\`/\`kind\`) + live git — never hand-edited`,
   `> (concurrency-safe: a pure render, atomic write). Detail lives in each STATE. Compiled: ${today}.`,
   "",
+  ...extras,
   "## Active threads",
   ...(active.length
     ? active.map((t) => `- **${t.slug}** — ${t.summary} → [[${t.slug}/${stateLink}]]`)

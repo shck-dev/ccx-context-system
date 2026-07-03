@@ -23,6 +23,8 @@ export type CcxConfig = {
   script_extensions: string[];
   /** INDEX H1 suffix; null → the project dir name. */
   index_title: string | null;
+  /** Extra live INDEX sections: each command runs at compile time (5s cap); empty output → omitted. */
+  extra_sections: Array<{ title: string; command: string }>;
 };
 
 export const DEFAULTS: CcxConfig = {
@@ -34,6 +36,7 @@ export const DEFAULTS: CcxConfig = {
   oneoff_script_runner: "bun",
   script_extensions: ["ts", "js", "mjs", "cjs", "py", "sh"],
   index_title: null,
+  extra_sections: [],
 };
 
 export const CONFIG_BASENAME = "methodology.config.json";
@@ -68,6 +71,14 @@ function sanitize(user: unknown): Partial<CcxConfig> {
   }
   if (u.index_title === null || (typeof u.index_title === "string" && u.index_title.length > 0))
     out.index_title = u.index_title as string | null;
+  if (Array.isArray(u.extra_sections)) {
+    out.extra_sections = u.extra_sections.filter(
+      (s): s is { title: string; command: string } =>
+        typeof s === "object" && s !== null &&
+        typeof (s as Record<string, unknown>).title === "string" && ((s as Record<string, unknown>).title as string).trim().length > 0 &&
+        typeof (s as Record<string, unknown>).command === "string" && ((s as Record<string, unknown>).command as string).trim().length > 0,
+    ).map((s) => ({ title: s.title, command: s.command }));
+  }
   return out;
 }
 
