@@ -57,7 +57,7 @@ for (const slug of slugs) {
     continue;
   }
   if (!st.isFile()) continue;
-  const txt = readFileSync(p, "utf8");
+  const txt = readFileSync(p, "utf8").replace(/\r\n/g, "\n");
   const fm = parseFrontmatter(txt);
   const kind = (fm.kind || "thread").toLowerCase();
   const summary =
@@ -69,7 +69,7 @@ for (const slug of slugs) {
 
 const live = (cmd: string) => {
   try {
-    return execSync(cmd, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trimEnd();
+    return execSync(cmd, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 }).trimEnd();
   } catch {
     return "";
   }

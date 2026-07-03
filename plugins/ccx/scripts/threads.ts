@@ -28,7 +28,7 @@ for (const slug of readdirSync(scratch).sort()) {
     out.push(slug);
     continue;
   }
-  const txt = readFileSync(stateP, "utf8");
+  const txt = readFileSync(stateP, "utf8").replace(/\r\n/g, "\n");
   const title = txt.match(/^# (.+)$/m)?.[1] ?? slug;
   const status =
     txt.match(/^\*\*Status:\*\*\s*(.+)$/m)?.[1]?.trim() ??

@@ -84,6 +84,11 @@ writeFileSync(
   JSON.stringify({ scratch_root: "notes", script_extensions: ["ts", "py", "rb"] }, null, 2),
 );
 writeFileSync(join(FIX2, "notes", "t", "STATE.md"), "---\ntitle: t\nkind: thread\nsummary: 'custom-root thread'\n---\n# t\n**Status:** alive\n");
+mkdirSync(join(FIX2, "notes", "crlf"), { recursive: true });
+writeFileSync(
+  join(FIX2, "notes", "crlf", "STATE.md"),
+  "---\r\ntitle: crlf\r\nkind: done\r\nsummary: 'windows line endings'\r\n---\r\n\r\n# crlf\r\n**Status:** parsed fine\r\n",
+);
 
 // ---------- fixture 3: wrong-TYPED config values (must all fall back per-field) ----------
 const FIX3 = join(base, "proj-badcfg");
@@ -171,6 +176,15 @@ run("compile-index.ts", { root: FIX });
 ok("double-compile byte-identical", readFileSync(INDEX, "utf8") === idx);
 ok("non-git fixture: no Worktrees/PRs sections", !idx.includes("## Worktrees") && !idx.includes("## Open PRs"));
 ok("compile reports counts", c1.out.includes("compiled 1 active · 1 hubs · 1 done"));
+
+// ---------- compile-index: custom root + CRLF ----------
+console.log("compile-index.ts (custom root, CRLF)");
+run("compile-index.ts", { root: FIX2 });
+const idx2 = readFileSync(join(FIX2, "notes", "INDEX.md"), "utf8");
+ok("CRLF STATE lands in Done with parsed summary", /## Done[\s\S]*\*\*crlf\*\* — windows line endings/.test(idx2));
+ok("CRLF STATE absent from Active", !/## Active threads[\s\S]*\*\*crlf\*\*[\s\S]*## Notes/.test(idx2));
+const t2 = run("threads.ts", { root: FIX2 }).out;
+ok("threads.ts reads CRLF Status without stray \\r", t2.includes("status: parsed fine") && !t2.includes("\r"));
 
 // ---------- scan ----------
 console.log("scan.ts");
