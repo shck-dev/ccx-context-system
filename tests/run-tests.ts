@@ -128,6 +128,12 @@ ok("valid fields still apply alongside invalid ones", loadConfig(FIX2).scratch_r
 const scBad = run("scan.ts", { root: FIX3 });
 ok("scan.ts survives a wrong-typed config", scBad.code === 0 && scBad.out.includes("t\tyes"));
 
+// ---------- text ----------
+console.log("text.ts");
+const { clip } = await import(join(SCRIPTS, "lib", "text.ts"));
+const clipped = clip("a".repeat(238) + "😀😀", 240);
+ok("clip never splits a surrogate pair", clipped.isWellFormed() && clipped.endsWith("…") && clipped.length <= 240);
+
 // ---------- identity ----------
 console.log("identity.ts");
 const { slugify } = await import(join(SCRIPTS, "lib", "identity.ts"));
