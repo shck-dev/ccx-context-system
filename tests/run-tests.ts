@@ -218,6 +218,18 @@ ok("archived note untouched", readFileSync(join(S, "_archive", "old", "note.md")
 const stateBefore = readFileSync(join(S, "alpha", "STATE.md"), "utf8");
 backlink(join(S, "alpha", "STATE.md"));
 ok("STATE.md itself untouched", readFileSync(join(S, "alpha", "STATE.md"), "utf8") === stateBefore);
+const OTHER = join(base, "other-proj", ".scratch", "x");
+mkdirSync(OTHER, { recursive: true });
+writeFileSync(join(OTHER, "n.md"), "unlinked note outside the project\n");
+backlink(join(OTHER, "n.md")); // hook runs with root = FIX — must not touch a foreign .scratch
+ok("note under another project's .scratch untouched", readFileSync(join(OTHER, "n.md"), "utf8") === "unlinked note outside the project\n");
+mkdirSync(join(S, "alpha", "sub"), { recursive: true });
+writeFileSync(join(S, "alpha", "sub", "deep.md"), "nested note\n");
+backlink(join(S, "alpha", "sub", "deep.md"));
+ok("nested note untouched (only direct children of a thread dir)", readFileSync(join(S, "alpha", "sub", "deep.md"), "utf8") === "nested note\n");
+writeFileSync(join(S, ".obsidian", "stray.md"), "vault plumbing\n");
+backlink(join(S, ".obsidian", "stray.md"));
+ok("dot-dir note untouched", readFileSync(join(S, ".obsidian", "stray.md"), "utf8") === "vault plumbing\n");
 
 // ---------- summary ----------
 console.log(`\n${pass}/${pass + fail} passed${fail ? ` — FAILED: ${bad.join(" | ")}` : ""}`);
