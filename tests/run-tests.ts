@@ -152,7 +152,11 @@ ok("clip never splits a surrogate pair", clipped.isWellFormed() && clipped.endsW
 console.log("identity.ts");
 const { slugify } = await import(join(SCRIPTS, "lib", "identity.ts"));
 ok('slugify("Fix Auth Redirect!")', slugify("Fix Auth Redirect!") === "fix-auth-redirect");
-ok('slugify("héllo wörld") (non-ascii → dashes)', slugify("héllo wörld") === "h-llo-w-rld");
+ok('slugify("héllo wörld") keeps unicode letters', slugify("héllo wörld") === "héllo-wörld");
+ok('slugify("Исправить Баг") stays readable', slugify("Исправить Баг") === "исправить-баг");
+const { normalizeForMatch } = await import(join(SCRIPTS, "lib", "identity.ts"));
+ok("normalizeForMatch: CP-1758 ≡ cp1758 ≡ cp-1758",
+  normalizeForMatch("CP-1758") === "cp1758" && normalizeForMatch("cp-1758") === "cp1758" && normalizeForMatch("cp1758") === "cp1758");
 ok('slugify("___") falls back to "thread"', slugify("___") === "thread");
 const longSlug = slugify("x".repeat(80) + " tail");
 ok("slugify truncates ≤60, no trailing dash", longSlug.length <= 60 && !longSlug.endsWith("-"));
