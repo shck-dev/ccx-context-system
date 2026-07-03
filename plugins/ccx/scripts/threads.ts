@@ -4,6 +4,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { loadConfig, projectRoot } from "./lib/config";
+import { clip } from "./lib/text";
 
 const root = projectRoot();
 const cfg = loadConfig(root);
@@ -30,9 +31,11 @@ for (const slug of readdirSync(scratch).sort()) {
   }
   const txt = readFileSync(stateP, "utf8").replace(/\r\n/g, "\n");
   const title = txt.match(/^# (.+)$/m)?.[1] ?? slug;
-  const status =
+  const status = clip(
     txt.match(/^\*\*Status:\*\*\s*(.+)$/m)?.[1]?.trim() ??
-    `(none — add a **Status:** line to this ${cfg.state_basename})`;
+      `(none — add a **Status:** line to this ${cfg.state_basename})`,
+    200,
+  );
   out.push(`- **${slug}** — ${title}\n    status: ${status}\n    (→ ${cfg.scratch_root}/${slug}/${cfg.state_basename})`);
 }
 console.log(out.length ? out.join("\n") : "(none)");

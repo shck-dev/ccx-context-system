@@ -61,6 +61,9 @@ writeFileSync(join(FIX, "main.go"), "package main\n\nfunc main() {}\n");
 state("alpha", "thread", "alpha work in flight");
 state("beta", "hub", "reference hub note");
 state("delta", "done", "shipped last month");
+state("longsum", "thread", "L".repeat(500));
+const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000);
+utimesSync(join(S, "longsum", "STATE.md"), twoDaysAgo, twoDaysAgo);
 writeFileSync(join(S, "alpha", "note.md"), "> [[STATE]]\n\nlinked note\n");
 writeFileSync(join(S, "alpha", "orphan.md"), "an unlinked note\n");
 mkdirSync(join(S, "gamma"), { recursive: true });
@@ -143,14 +146,16 @@ ok("CLI with no args exits non-zero", run("slug.ts").code !== 0);
 console.log("where.ts");
 const w = run("where.ts", { root: FIX }).out;
 ok("prints project root", w.includes(`project root: ${FIX}`));
-ok("prints plugin root + 3 threads", w.includes(`plugin root: ${PLUGIN}`) && w.includes("3 thread(s)"));
+ok("prints plugin root + 4 threads", w.includes(`plugin root: ${PLUGIN}`) && w.includes("4 thread(s)"));
 
 // ---------- threads ----------
 console.log("threads.ts");
 const t = run("threads.ts", { root: FIX }).out;
 ok("default mode lists alpha with status", t.includes("**alpha**") && t.includes("status: alpha work in flight"));
 const slugs = run("threads.ts", { root: FIX, args: ["--slugs"] }).out.trim().split("\n");
-ok("--slugs = exactly alpha,beta,delta", slugs.join(",") === "alpha,beta,delta");
+ok("--slugs = exactly alpha,beta,delta,longsum", slugs.join(",") === "alpha,beta,delta,longsum");
+const longStatus = t.split("\n").find((l) => l.includes("LLLL")) ?? "";
+ok("oversized status clipped to ≤200 chars + ellipsis", longStatus.includes("…") && longStatus.trim().length < 220);
 
 // ---------- orphans ----------
 console.log("orphans.ts");
@@ -175,7 +180,9 @@ ok("no leftover .tmp files", !readdirSync(S).some((f) => f.includes(".tmp.")));
 run("compile-index.ts", { root: FIX });
 ok("double-compile byte-identical", readFileSync(INDEX, "utf8") === idx);
 ok("non-git fixture: no Worktrees/PRs sections", !idx.includes("## Worktrees") && !idx.includes("## Open PRs"));
-ok("compile reports counts", c1.out.includes("compiled 1 active · 1 hubs · 1 done"));
+ok("compile reports counts", c1.out.includes("compiled 2 active · 1 hubs · 1 done"));
+const longLine = idx.split("\n").find((l) => l.includes("**longsum**")) ?? "";
+ok("oversized summary clipped to ≤240 chars + ellipsis", longLine.includes("…") && longLine.length < 300);
 
 // ---------- compile-index: custom root + CRLF ----------
 console.log("compile-index.ts (custom root, CRLF)");
@@ -190,7 +197,7 @@ ok("threads.ts reads CRLF Status without stray \\r", t2.includes("status: parsed
 console.log("scan.ts");
 const sc = run("scan.ts", { root: FIX }).out;
 const scLines = sc.trim().split("\n").filter((l) => !l.startsWith("#"));
-ok("4 rows (alpha,beta,gamma,delta)", scLines.length === 4);
+ok("5 rows (alpha,beta,gamma,delta,longsum)", scLines.length === 5);
 ok("gamma has STATE=NO", scLines.some((l) => l.startsWith("gamma\tNO")));
 const gammaAge = parseInt(scLines.find((l) => l.startsWith("gamma"))?.split("\t")[5] ?? "-1", 10);
 ok("gamma age ≥ 19 days", gammaAge >= 19);

@@ -14,6 +14,7 @@ import { readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "
 import { basename, join } from "node:path";
 import { execSync } from "node:child_process";
 import { loadConfig, projectRoot } from "./lib/config";
+import { clip } from "./lib/text";
 
 const ROOT = projectRoot();
 const cfg = loadConfig(ROOT);
@@ -64,7 +65,7 @@ for (const slug of slugs) {
     fm.summary ||
     txt.match(/^\*\*Status:\*\*\s*(.+)$/m)?.[1]?.trim().split(/(?<=\.)\s/)[0] ||
     "(no summary — add `summary:` to this STATE's frontmatter)";
-  all.push({ slug, kind, summary, mtime: st.mtimeMs });
+  all.push({ slug, kind, summary: clip(summary, 240), mtime: st.mtimeMs });
 }
 
 const live = (cmd: string) => {
