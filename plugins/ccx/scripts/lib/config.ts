@@ -43,12 +43,39 @@ export function projectRoot(): string {
   return process.env.CLAUDE_PROJECT_DIR || process.cwd();
 }
 
+/** Per-field validation: any invalid field silently falls back to its default (the documented
+ *  "malformed config → defaults" contract, enforced per-field, not just per-file). */
+function sanitize(user: unknown): Partial<CcxConfig> {
+  if (typeof user !== "object" || user === null || Array.isArray(user)) return {};
+  const u = user as Record<string, unknown>;
+  const out: Partial<CcxConfig> = {};
+  const isRelPath = (v: unknown): v is string =>
+    typeof v === "string" && v.length > 0 && !v.startsWith("/") && !v.includes("\\") &&
+    !v.split("/").some((seg) => seg === "" || seg === "." || seg === "..");
+  const isBasename = (v: unknown): v is string =>
+    typeof v === "string" && v.length > 0 && !v.includes("/") && !v.includes("\\") && v !== "." && v !== "..";
+  if (isRelPath(u.scratch_root)) out.scratch_root = u.scratch_root;
+  if (isBasename(u.state_basename)) out.state_basename = u.state_basename;
+  if (isBasename(u.index_basename)) out.index_basename = u.index_basename;
+  if (isBasename(u.archive_dir)) out.archive_dir = u.archive_dir;
+  if (u.ticket_system === "none" || u.ticket_system === "linear" || u.ticket_system === "github")
+    out.ticket_system = u.ticket_system;
+  if (typeof u.oneoff_script_runner === "string" && u.oneoff_script_runner.trim().length > 0)
+    out.oneoff_script_runner = u.oneoff_script_runner;
+  if (Array.isArray(u.script_extensions)) {
+    const exts = u.script_extensions.filter((e): e is string => typeof e === "string" && /^[a-z0-9]+$/i.test(e));
+    if (exts.length > 0) out.script_extensions = exts;
+  }
+  if (u.index_title === null || (typeof u.index_title === "string" && u.index_title.length > 0))
+    out.index_title = u.index_title as string | null;
+  return out;
+}
+
 export function loadConfig(root: string = projectRoot()): CcxConfig {
   const p = join(root, CONFIG_BASENAME);
   if (!existsSync(p)) return DEFAULTS;
   try {
-    const user = JSON.parse(readFileSync(p, "utf8"));
-    return { ...DEFAULTS, ...user };
+    return { ...DEFAULTS, ...sanitize(JSON.parse(readFileSync(p, "utf8"))) };
   } catch {
     return DEFAULTS;
   }

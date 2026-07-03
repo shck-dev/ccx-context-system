@@ -85,6 +85,22 @@ writeFileSync(
 );
 writeFileSync(join(FIX2, "notes", "t", "STATE.md"), "---\ntitle: t\nkind: thread\nsummary: 'custom-root thread'\n---\n# t\n**Status:** alive\n");
 
+// ---------- fixture 3: wrong-TYPED config values (must all fall back per-field) ----------
+const FIX3 = join(base, "proj-badcfg");
+mkdirSync(join(FIX3, ".scratch", "t"), { recursive: true });
+writeFileSync(
+  join(FIX3, "methodology.config.json"),
+  JSON.stringify({
+    scratch_root: "",
+    script_extensions: "ts",
+    ticket_system: "jira",
+    archive_dir: "a/b",
+    index_title: 7,
+    state_basename: 42,
+  }),
+);
+writeFileSync(join(FIX3, ".scratch", "t", "STATE.md"), "---\ntitle: t\nkind: thread\nsummary: 'ok'\n---\n# t\n**Status:** alive\n");
+
 console.log(`fixtures at ${base}\n`);
 
 // ---------- config ----------
@@ -97,6 +113,12 @@ ok(
   loadConfig(FIX2).script_extensions.includes("rb") &&
     !loadConfig(FIX2).script_extensions.includes("sh"),
 );
+const badCfg = loadConfig(FIX3);
+ok("wrong-typed fields fall back per-field", badCfg.scratch_root === ".scratch" && badCfg.archive_dir === "_archive" && badCfg.ticket_system === "none" && badCfg.index_title === null && badCfg.state_basename === "STATE.md");
+ok("string script_extensions falls back to default array", Array.isArray(badCfg.script_extensions) && badCfg.script_extensions.includes("sh"));
+ok("valid fields still apply alongside invalid ones", loadConfig(FIX2).scratch_root === "notes");
+const scBad = run("scan.ts", { root: FIX3 });
+ok("scan.ts survives a wrong-typed config", scBad.code === 0 && scBad.out.includes("t\tyes"));
 
 // ---------- identity ----------
 console.log("identity.ts");
