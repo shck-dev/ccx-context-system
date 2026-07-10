@@ -13,6 +13,10 @@ This regenerates the scratch INDEX, the one screen that shows everything in flig
 copy:** the index is a thin layer of pointers + live status; the real detail stays in each thread's
 STATE doc. Never hand-maintain the INDEX — re-run this skill.
 
+> **Freshness is automatic** — the `auto-compile-index` hook recompiles the INDEX on every STATE
+> write, so forgetting this skill loses nothing. Run it for the full dashboard pass: frontmatter
+> refresh, orphan-note sweep, and the live environment/PR picture below.
+
 ## Live data (injected at load — already current below)
 
 **Project + config:**

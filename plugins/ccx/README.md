@@ -10,10 +10,12 @@ Extracted from a production setup where the methodology ran for weeks across ~30
 
 | Piece | What it does |
 |---|---|
-| `/ccx:start-thread <topic>` | Scaffolds `.scratch/<slug>/STATE.md` (frontmatter + handoff template) |
+| `/ccx:start-thread <topic>` | **Create-or-resume**: scaffolds `.scratch/<slug>/STATE.md`, or — if the thread exists — resumes it with a briefing (STATE + live git/PR deltas). One command, day 1 or day 20 |
 | `/ccx:save-state` | The dashboard: refresh STATE frontmatter → compile INDEX → ≤6-line summary |
 | `/ccx:tidy-scratch` | Date-aware GC: dry-run plan → confirm → archive/delete → reindex |
 | `backlink-scratch-notes` hook | Auto-clusters new notes under their thread's STATE (Obsidian graph hygiene) |
+| `auto-compile-index` hook | The INDEX saves itself: any STATE write triggers a detached, debounced recompile — forgetting `/ccx:save-state` loses nothing |
+| `record-session-thread` + `state-freshness-guard` hooks | A session opened with `/ccx:start-thread` can't end with a stale STATE: stopping with work newer than the STATE doc blocks once with "persist Status/summary first" (throttled 30 min; `SKIP_STATE_GUARD=1` to disable) |
 
 **Prerequisite:** `bun` on PATH.
 

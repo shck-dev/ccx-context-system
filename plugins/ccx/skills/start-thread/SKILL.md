@@ -1,14 +1,17 @@
 ---
 name: start-thread
 description: >-
-  Use when opening a fresh unit of work — a feature, bug, research spike, refactor, an experiment —
-  that should survive context loss in its own scratch workspace with a handoff doc. Also when asked
-  to "start a thread", "new thread", "track this work", or "make a workspace for this".
+  Use when opening OR RESUMING a unit of work — a feature, bug, research spike, refactor, an
+  experiment — that should survive context loss in its own scratch workspace with a handoff doc.
+  Idempotent create-or-resume: a fresh topic gets a scaffolded STATE doc; an existing thread gets a
+  resume briefing (STATE + live git/PR deltas) and you keep working — one command, day 1 or day 20.
+  Also when asked to "start a thread", "new thread", "continue the thread", "resume", "track this
+  work", or "make a workspace for this".
 argument-hint: "[topic, e.g. fix-auth-redirect]"
 allowed-tools: Bash(git *), Bash(ls *), Bash(mkdir *), Bash(bun *)
 ---
 
-# Start a thread — scaffold a scratch workspace
+# Start or resume a thread — scratch workspace with a handoff doc
 
 Topic requested: **$ARGUMENTS**
 
@@ -28,11 +31,24 @@ Topic requested: **$ARGUMENTS**
    (one shared identity function — never re-implement slugging by hand; if the variable shows as a
    literal, use the `plugin root:` path from the injected block above). With `ticket_system: none`
    a thread is any unit of work; ticket-system adapters may extend this later.
-3. **Guard:** if `<scratch_root>/<slug>/` already has a STATE doc (see the injected config block
-   for the real paths), STOP — show its first heading and offer to open it instead of clobbering.
-   Treat slugs as the SAME thread when they match ignoring case and separators (`CP-1758` ≡
-   `cp-1758` ≡ `cp1758` — the `normalizeForMatch` rule in `scripts/lib/identity.ts`): a
-   near-match in the existing-threads list above → STOP the same way and offer the existing one.
+3. **If `<scratch_root>/<slug>/` already has a STATE doc → RESUME.** This is the normal day-2 path,
+   not an error: no questions, no "want me to open it?" menu — brief and get to work. Treat slugs
+   as the SAME thread when they match ignoring case and separators (`CP-1758` ≡ `cp-1758` ≡
+   `cp1758` — the `normalizeForMatch` rule in `scripts/lib/identity.ts`): a near-match in the
+   existing-threads list above resumes THAT thread. Never overwrite or re-scaffold an existing
+   STATE (skip steps 4–6 entirely). Do all of this:
+   1. **Read the whole STATE doc** — Status, the ask, plan, current state, open/deferred.
+   2. **Pull live deltas** (parallel; each optional-degrade — an unreachable source gets a one-line
+      note, never stalls the resume): current branch; a `git worktree list` / `git branch --list`
+      match on the slug; if a matching worktree/branch exists — `git status --porcelain` (dirty
+      files) and `gh pr list --head <branch> --state all --json number,state,reviewDecision --limit 1`
+      (when `gh` resolves).
+   3. **Report a resume briefing** — where the user left off (Status, next plan step, open items),
+      then **what changed since** (branch moved / PR merged / dirty files). Explicitly flag any live
+      fact that CONTRADICTS the STATE. End ready to work — not with a menu.
+   4. Resume is **read-only on the STATE doc** — flag drift in the briefing; the session updates
+      STATE as work actually proceeds (the `state-freshness-guard` Stop hook enforces this before
+      the session ends).
 4. **Seed the ask from the conversation** — there is no ticket system to pull from. If the goal
    isn't clear from context, ask for one line. Mark anything unknown as TODO rather than inventing.
 5. **Create** `<scratch_root>/<slug>/` and write the STATE doc from the template below, filling
@@ -41,8 +57,8 @@ Topic requested: **$ARGUMENTS**
 6. **Version-control check:** if this is a git repo and `<scratch_root>` is not ignored
    (`git check-ignore -q <scratch_root>` fails), ASK whether to add it to `.gitignore` — some
    people want the notebook versioned, some never want notes in PRs. Don't silently do either.
-7. **Report** the path created and a one-line summary, and remind to run /ccx:save-state so the
-   thread lands in the INDEX.
+7. **Report** the path created and a one-line summary. (No need to run /ccx:save-state for
+   indexing — the `auto-compile-index` hook recompiles the INDEX on every STATE write.)
 
 ### STATE template
 
