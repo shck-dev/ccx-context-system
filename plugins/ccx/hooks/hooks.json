@@ -11,6 +11,42 @@
             "statusMessage": "ccx: linking note into graph"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${CLAUDE_PLUGIN_ROOT}/scripts/auto-compile-index.ts\"",
+            "timeout": 10,
+            "statusMessage": "ccx: recompiling INDEX"
+          }
+        ]
+      }
+    ],
+    "UserPromptExpansion": [
+      {
+        "matcher": "start-thread",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${CLAUDE_PLUGIN_ROOT}/scripts/record-session-thread.ts\"",
+            "timeout": 10,
+            "statusMessage": "ccx: tracking session thread"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${CLAUDE_PLUGIN_ROOT}/scripts/state-freshness-guard.ts\"",
+            "timeout": 15,
+            "statusMessage": "ccx: STATE freshness guard"
+          }
+        ]
       }
     ]
   }

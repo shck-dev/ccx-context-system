@@ -1,8 +1,8 @@
 {
   "name": "ccx",
   "displayName": "ccx — portable notebook core",
-  "version": "0.3.0",
-  "description": "Scratch-notebook context management for any project: per-thread STATE.md handoff docs, a compiled parallel-session-safe INDEX dashboard (/ccx:save-state · /ccx:start-thread · /ccx:tidy-scratch), plus a graph-backlink hook for Obsidian. Language-agnostic, no ticket system required.",
+  "version": "0.4.0",
+  "description": "Scratch-notebook context management for any project: per-thread STATE.md handoff docs with one-command create-or-resume (/ccx:start-thread), a compiled parallel-session-safe INDEX dashboard that recompiles itself on every STATE write (/ccx:save-state · /ccx:tidy-scratch), a Stop-hook freshness guard so working state is persisted before a session ends, plus a graph-backlink hook for Obsidian. Language-agnostic, no ticket system required.",
   "license": "MIT",
   "author": { "name": "shck-dev", "url": "https://github.com/shck-dev" },
   "keywords": ["context", "notebook", "scratch", "state", "handoff", "memory"]

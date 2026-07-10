@@ -280,6 +280,91 @@ writeFileSync(join(S, ".obsidian", "stray.md"), "vault plumbing\n");
 backlink(join(S, ".obsidian", "stray.md"));
 ok("dot-dir note untouched", readFileSync(join(S, ".obsidian", "stray.md"), "utf8") === "vault plumbing\n");
 
+// ---------- hook helper with extra env ----------
+function runHookEnv(script: string, root: string, stdin: object, extraEnv: Record<string, string> = {}) {
+  const r = Bun.spawnSync(["bun", join(SCRIPTS, script)], {
+    env: { ...process.env, CLAUDE_PROJECT_DIR: root, ...extraEnv } as Record<string, string>,
+    cwd: root,
+    stdin: Buffer.from(JSON.stringify(stdin)),
+  });
+  return { code: r.exitCode, out: (r.stdout?.toString() ?? "").trim(), err: r.stderr?.toString() ?? "" };
+}
+
+// ---------- auto-compile-index hook ----------
+console.log("auto-compile-index.ts");
+const SYNC = { CCX_AUTOCOMPILE_SYNC: "1" };
+const stateWrite = (file_path: string, tool_name = "Write") => ({ tool_name, tool_input: { file_path } });
+
+rmSync(INDEX, { force: true });
+const a1 = runHookEnv("auto-compile-index.ts", FIX, stateWrite(join(S, "alpha", "STATE.md")), SYNC);
+ok("STATE write → INDEX recompiled, silent stdout", existsSync(INDEX) && a1.out === "" && a1.code === 0);
+rmSync(INDEX, { force: true });
+runHookEnv("auto-compile-index.ts", FIX, stateWrite(join(S, "alpha", "orphan.md")), SYNC);
+ok("non-STATE note → no compile", !existsSync(INDEX));
+runHookEnv("auto-compile-index.ts", FIX, stateWrite(join(S, "_archive", "old", "STATE.md")), SYNC);
+ok("archived STATE → no compile", !existsSync(INDEX));
+runHookEnv("auto-compile-index.ts", FIX, stateWrite(INDEX), SYNC);
+ok("INDEX itself → no compile", !existsSync(INDEX));
+runHookEnv("auto-compile-index.ts", FIX, stateWrite(join(S, "alpha", "STATE.md"), "Bash"), SYNC);
+ok("other tool → no compile", !existsSync(INDEX));
+runHookEnv("auto-compile-index.ts", FIX, stateWrite(join(S, "alpha", "STATE.md"), "Edit"), SYNC);
+ok("Edit on STATE → compiles too", existsSync(INDEX));
+// debounce: a fresh .pending lock suppresses the kick
+rmSync(INDEX, { force: true });
+mkdirSync(join(S, ".sessions"), { recursive: true });
+writeFileSync(join(S, ".sessions", ".index-compile.pending"), "");
+runHookEnv("auto-compile-index.ts", FIX, stateWrite(join(S, "alpha", "STATE.md")), SYNC);
+ok("fresh .pending lock → kick debounced", !existsSync(INDEX));
+rmSync(join(S, ".sessions", ".index-compile.pending"), { force: true });
+// custom scratch root honors config
+const INDEX2 = join(FIX2, "notes", "INDEX.md");
+rmSync(INDEX2, { force: true });
+runHookEnv("auto-compile-index.ts", FIX2, stateWrite(join(FIX2, "notes", "t", "STATE.md")), SYNC);
+ok("custom scratch_root (notes/) STATE write → its INDEX recompiled", existsSync(INDEX2));
+
+// ---------- record-session-thread hook ----------
+console.log("record-session-thread.ts");
+const expand = (session_id: string, command_name: string, command_args: string) =>
+  runHookEnv("record-session-thread.ts", FIX, { session_id, command_name, command_args });
+expand("S9", "ccx:start-thread", "Fix Auth Redirect");
+const s9 = JSON.parse(readFileSync(join(S, ".sessions", "S9.json"), "utf8"));
+ok("plugin-namespaced command → association written with slugified slug", s9.slug === "fix-auth-redirect" && s9.display === "Fix Auth Redirect" && s9.source === "start-thread");
+expand("S10", "start-thread", "guard");
+ok("bare command name binds too", existsSync(join(S, ".sessions", "S10.json")));
+expand("S11", "ccx:start-thread", "");
+ok("arg-less → no association (thread not known yet)", !existsSync(join(S, ".sessions", "S11.json")));
+expand("S12", "ccx:save-state", "x");
+ok("other command → no association", !existsSync(join(S, ".sessions", "S12.json")));
+
+// ---------- state-freshness-guard hook ----------
+console.log("state-freshness-guard.ts");
+state("guard", "thread", "guard fixture");
+writeFileSync(join(S, "guard", "work.ts"), "// work");
+const staleT = new Date(Date.now() - 12 * 60_000); // beyond GRACE (10 min)
+const recentT = new Date(Date.now() - 60_000);
+utimesSync(join(S, "guard", "STATE.md"), staleT, staleT);
+utimesSync(join(S, "guard", "work.ts"), recentT, recentT);
+writeFileSync(join(S, ".sessions", "S20.json"), JSON.stringify({ display: "guard", slug: "guard", source: "start-thread", ts: Date.now() }));
+const g1 = runHookEnv("state-freshness-guard.ts", FIX, { session_id: "S20", stop_hook_active: false });
+let g1parsed: any = null;
+try { g1parsed = JSON.parse(g1.out); } catch { /* assertion below reports it */ }
+ok("drifted thread → blocks with decision JSON naming the slug", g1.code === 0 && g1parsed?.decision === "block" && String(g1parsed?.reason ?? "").includes('"guard"'), g1.out.slice(0, 120) || g1.err.slice(0, 120));
+ok("nudge timestamp persisted", typeof JSON.parse(readFileSync(join(S, ".sessions", "S20.json"), "utf8")).stateGuardNudge === "number");
+const g2 = runHookEnv("state-freshness-guard.ts", FIX, { session_id: "S20", stop_hook_active: false });
+ok("immediate re-stop → throttled, silent", g2.out === "");
+const g3 = runHookEnv("state-freshness-guard.ts", FIX, { session_id: "S20", stop_hook_active: true });
+ok("stop_hook_active → silent pass", g3.out === "");
+const g4 = runHookEnv("state-freshness-guard.ts", FIX, { session_id: "NOPE", stop_hook_active: false });
+ok("unassociated session → silent pass", g4.out === "");
+writeFileSync(join(S, ".sessions", "S21.json"), JSON.stringify({ display: "guard", slug: "guard", source: "start-thread", ts: Date.now() }));
+const g5 = runHookEnv("state-freshness-guard.ts", FIX, { session_id: "S21", stop_hook_active: false }, { SKIP_STATE_GUARD: "1" });
+ok("SKIP_STATE_GUARD=1 → silent pass", g5.out === "");
+state("guard2", "thread", "fresh state fixture"); // STATE mtime = now (inside GRACE)
+writeFileSync(join(S, "guard2", "late-note.ts"), "// trailing note");
+writeFileSync(join(S, ".sessions", "S22.json"), JSON.stringify({ display: "guard2", slug: "guard2", source: "start-thread", ts: Date.now() }));
+const g6 = runHookEnv("state-freshness-guard.ts", FIX, { session_id: "S22", stop_hook_active: false });
+ok("STATE inside GRACE → silent pass (trailing note doesn't re-trip)", g6.out === "");
+
 // ---------- summary ----------
 console.log(`\n${pass}/${pass + fail} passed${fail ? ` — FAILED: ${bad.join(" | ")}` : ""}`);
 rmSync(base, { recursive: true, force: true });
